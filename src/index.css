@@ -113,3 +113,19 @@ code {
 th {
   color: #c97a0c;
 }
+
+.row-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+
+.row-actions button {
+  width: auto;
+  margin: 0;
+}
+
+input.pin-edit {
+  width: 70px;
+}

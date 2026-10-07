@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import MenuManagement from "./MenuManagement.jsx";
+import EmployeeManagement from "./EmployeeManagement.jsx";
+import CheckManagement from "./CheckManagement.jsx";
 
 const API_BASE_URL = "http://10.0.0.110:8080";
 //const API_BASE_URL = "http://localhost:8080";
@@ -99,6 +101,35 @@ function App() {
   }
 }
 
+async function handleUpdateEmployee(id, updatedEmployee) {
+  setErrorMessage("");
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/employees/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedEmployee),
+      }
+    );
+
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(`Update failed (${response.status}): ${details}`);
+    }
+
+    await loadEmployees();
+    return true;
+  } catch (error) {
+    console.error(error);
+    setErrorMessage(error.message);
+    return false;
+  }
+}
+
 async function handleLogin(event) {
   event.preventDefault();
 
@@ -162,7 +193,7 @@ async function loadChecks(date) {
 
 if (!isLoggedIn) {
   return (
-    //----------------------------------------- LOGIN SECTION ----------------------------------------
+    //----------------------------------------- LOGIN SECTION(LOGIN FORM) ----------------------------------------
     <main className="page">
       <section className="card">
         <h1>Admin Login</h1>
@@ -207,7 +238,7 @@ if (!isLoggedIn) {
         >
          Logout
       </button>
-
+{/*------------------------------------------------------THIS IS THE DIV THAT HOLDS THE NAVIGATION BUTTONS(TABS)-----------------------*/}
         <div className = "tabs">
           <button
   type="button"
@@ -244,8 +275,13 @@ if (!isLoggedIn) {
         </div>
         </section>
         {/*-----------------------------------WHAT TO SHOW BASED ON ACTIVETAB---------------------------------*/}
+        {/*-------------------------------------DASHBOARD SECTION---------------------------------------------*/}
         {activeTab === "dashboard" && (
+          
+          
   <section className="card">
+    
+    
     <h2>Dashboard</h2>
     <p>Checks for {selectedCheckDate}</p>
 
@@ -299,74 +335,22 @@ if (!isLoggedIn) {
 {/*-----------------------------------WHAT TO SHOW BASED ON ACTIVETAB(EMPLOYEES)---------------------------------*/}
         {activeTab === "employees" && (
           <>
-          <section className="card">
-            <h2>Add Employee</h2>
-
-<form onSubmit={handleAddEmployee} className="form">
-          <input
-            type="text"
-            placeholder="Employee name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
+          <EmployeeManagement 
+          employees={employees}
+          handleDeleteEmployee={handleDeleteEmployee}
+          handleAddEmployee={handleAddEmployee}
+          handleUpdateEmployee={handleUpdateEmployee}
+          name={name}
+          setName={setName}
+          pin={pin}
+          setPin={setPin}
+          role={role}
+          setRole={setRole}
+          errorMessage={errorMessage}
           />
+          
 
-          <input
-            type="text"
-            placeholder="PIN"
-            value={pin}
-            onChange={(event) => setPin(event.target.value)}
-            maxLength="4"
-            required
-          />
-
-          <select value={role} onChange={(event) => setRole(event.target.value)}>
-            <option value="SERVER">SERVER</option>
-            <option value="MANAGER">MANAGER</option>
-          </select>
-
-          <button type="submit">Add Employee</button>
-        </form>
-
-        {loginError && <p className="error">{loginError}</p>}
-      </section>
-
-      <section className="card">
-        <h2>Employees</h2>
-
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>PIN</th>
-              <th>Role</th>
-              <th>Active</th>
-              <th>Actions1</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {employees.map((employee) => (
-              <tr key={employee.id}>
-                <td>{employee.id}</td>
-                <td>{employee.name}</td>
-                <td>{employee.pin}</td>
-                <td>{employee.role}</td>
-                <td>{employee.active ? "Yes" : "No"}</td>
-                <td>
-                  <button
-                  type="button"
-                  onClick={() => handleDeleteEmployee(employee.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      
       </>
       )}
       {/*-----------------------------------WHAT TO SHOW BASED ON ACTIVETAB(MENU)---------------------------------*/}
@@ -376,62 +360,12 @@ if (!isLoggedIn) {
 )}
 {/*----------------------------------------- CHECKS SECTION ----------------------------------------*/}
     {activeTab === "checks" && (
-      <section className="card">
-        <h2>Checks</h2>
-        
-
-      <label>
-        Select Date:
-        <input
-        type="date"
-        value={selectedCheckDate}
-        onChange={(event) => {
-          const newDate = event.target.value;
-          setSelectedCheckDate(newDate);
-          loadChecks(newDate);
-        }}
-        />
-      </label>
-{/* ---------------------------------------------------------------------------CHECKS TABLE--------------*/}
-      <p>Showing checks for: {selectedCheckDate}</p>
-
-      <h3>All Checks</h3>
-
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Service:</th>
-            <th>Server:</th>
-            <th>Table#</th>
-            <th>Total</th>
-            <th>Status:</th>
-            <th>Created:</th>
-            <th>Updated:</th>
-            <th>Synced:</th>
-          </tr>
-        </thead>
-        <tbody>
-        {checks.map((check)=> (
-          <tr key={check.id}>
-            <td>{check.id}</td>
-            <td>{check.service}</td>
-            <td>{check.serverName ?? "Unknown Server"}</td>
-            <td>{check.tableId}</td>
-            <td>${Number(check.total ?? 0).toFixed(2)}</td>
-            <td>{check.status}</td>
-            <td>{new Date(check.createdAt).toLocaleString()}</td>
-            <td>{new Date(check.updatedAt).toLocaleString()}</td>
-            <td>{check.syncedAt
-            ? new Date(check.syncedAt).toLocaleString()
-            : "Not Synced"}</td>
-          </tr>
-        ))}
-      </tbody>
-      </table>
-
-      
-      </section>
+      <CheckManagement 
+      checks={checks}
+      selectedCheckDate={selectedCheckDate}
+      setSelectedCheckDate={setSelectedCheckDate}
+      loadChecks={loadChecks}
+      ></CheckManagement>
     )}
         
 
