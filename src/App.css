@@ -1,0 +1,98 @@
+.page {
+  min-height: 100vh;
+  padding: 40px;
+  background: #f4f4f5;
+  font-family: Arial, sans-serif;
+}
+
+.card {
+  max-width: 900px;
+  margin: 0 auto 24px auto;
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+input,
+select,
+button {
+  padding: 12px;
+  font-size: 16px;
+}
+
+button {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.error {
+  color: #b91c1c;
+  font-weight: bold;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+th {
+  font-weight: bold;
+}
+
+.card {
+  overflow-x: auto;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-container table {
+  width: 100%;
+}
+
+.table-container input,
+.table-container select {
+  max-width: 140px;
+  box-sizing: border-box;
+}
