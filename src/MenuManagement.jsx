@@ -5,6 +5,7 @@ export function MenuManagement({ apiBaseUrl }) {
   const [editImage, setEditImage] = useState(null);
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
+  const [eightySixedItems, setEightySixedItems] = useState([]);
 
   const [categoryName, setCategoryName] = useState("");
 
@@ -20,73 +21,88 @@ export function MenuManagement({ apiBaseUrl }) {
   }, [apiBaseUrl]);
 
   async function loadMenu() {
-  setErrorMessage("");
+    setErrorMessage("");
 
-  try {
-    const categoryResponse = await fetch(
-      `${apiBaseUrl}/api/menu/categories`
-    );
+    try {
+      const categoryResponse = await fetch(`${apiBaseUrl}/api/menu/categories`);
 
-    if (!categoryResponse.ok) {
-      throw new Error(
-        `Categories failed: ${categoryResponse.status}`
+      if (!categoryResponse.ok) {
+        throw new Error(`Categories failed: ${categoryResponse.status}`);
+      }
+
+      const categoryData = await categoryResponse.json();
+      setCategories(categoryData);
+
+      setCategoryId((currentCategoryId) => {
+        if (currentCategoryId === "" && categoryData.length > 0) {
+          return String(categoryData[0].id);
+        }
+
+        return currentCategoryId;
+      });
+    } catch (error) {
+      console.error("Could not load categories:", error);
+      setErrorMessage("Could not load menu categories.");
+    }
+
+    try {
+      const itemResponse = await fetch(`${apiBaseUrl}/api/menu/items`);
+
+      if (!itemResponse.ok) {
+        throw new Error(`Items failed: ${itemResponse.status}`);
+      }
+
+      const itemData = await itemResponse.json();
+      setItems(itemData);
+    } catch (error) {
+      console.error("Could not load menu items:", error);
+      setErrorMessage((currentMessage) =>
+        currentMessage
+          ? `${currentMessage} Could not load menu items.`
+          : "Could not load menu items.",
       );
     }
 
-    const categoryData = await categoryResponse.json();
-    setCategories(categoryData);
+    try {
+      const eightySixedItemsResponse = await fetch(
+        `${apiBaseUrl}/api/menu/items/86ed`,
+      );
 
-    setCategoryId((currentCategoryId) => {
-      if (currentCategoryId === "" && categoryData.length > 0) {
-        return String(categoryData[0].id);
+      if (!eightySixedItemsResponse.ok) {
+        throw new Error(
+          `Unvailable items failed: ${eightySixedItemsResponse.status}`,
+        );
       }
 
-      return currentCategoryId;
-    });
-  } catch (error) {
-    console.error("Could not load categories:", error);
-    setErrorMessage("Could not load menu categories.");
-  }
-
-  try {
-    const itemResponse = await fetch(
-      `${apiBaseUrl}/api/menu/items`
-    );
-
-    if (!itemResponse.ok) {
-      throw new Error(`Items failed: ${itemResponse.status}`);
+      const unavailableItemData = await eightySixedItemsResponse.json();
+      setEightySixedItems(unavailableItemData);
+    } catch (error) {
+      console.error("Could not load unavailable menu items:", error);
+      setErrorMessage((currentMessage) =>
+        currentMessage
+          ? `${currentMessage} Could not load 86ed menu items.`
+          : "Could not load menu items",
+      );
     }
-
-    const itemData = await itemResponse.json();
-    setItems(itemData);
-  } catch (error) {
-    console.error("Could not load menu items:", error);
-    setErrorMessage((currentMessage) =>
-      currentMessage
-        ? `${currentMessage} Could not load menu items.`
-        : "Could not load menu items."
-    );
   }
-}
+
+  
 
   async function handleAddCategory(event) {
     event.preventDefault();
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/menu/categories`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: categoryName.trim(),
-            active: true,
-            sortOrder: categories.length + 1
-          })
-        }
-      );
+      const response = await fetch(`${apiBaseUrl}/api/menu/categories`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: categoryName.trim(),
+          active: true,
+          sortOrder: categories.length + 1,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Could not create category");
@@ -114,13 +130,10 @@ export function MenuManagement({ apiBaseUrl }) {
     }
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/menu/items`,
-        {
-          method: "POST",
-          body: formData
-        }
-      );
+      const response = await fetch(`${apiBaseUrl}/api/menu/items`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
         throw new Error("Could not create menu item");
@@ -142,32 +155,32 @@ export function MenuManagement({ apiBaseUrl }) {
 
   async function deleteCategory(categoryId) {
     const confirmed = window.confirm(
-        "Are you sure you want to delete this category?"
+      "Are you sure you want to delete this category?",
     );
 
     if (!confirmed) return;
 
     const response = await fetch(
-        `http://localhost:8080/api/menu/categories/${categoryId}`,
-        {
-            method: "DELETE"
-        }
+      `http://localhost:8080/api/menu/categories/${categoryId}`,
+      {
+        method: "DELETE",
+      },
     );
 
     if (!response.ok) {
-        throw new Error("Unable to delete category");
+      throw new Error("Unable to delete category");
     }
 
     await loadMenu();
 
-    setCategories(currentCategories =>
-        currentCategories.filter(category => category.id !== categoryId)
+    setCategories((currentCategories) =>
+      currentCategories.filter((category) => category.id !== categoryId),
     );
-}
+  }
 
   function getCategoryName(itemCategoryId) {
     const category = categories.find(
-      (category) => category.id === itemCategoryId
+      (category) => category.id === itemCategoryId,
     );
 
     return category ? category.name : "Unknown";
@@ -182,10 +195,52 @@ export function MenuManagement({ apiBaseUrl }) {
       item.imageContentType || "image/jpeg"
     };base64,${item.imageData}`;
   }
-   function beginEditing(item) {
-  console.log("Editing item:", item);
-  setEditingItem({ ...item });
-  setEditImage(null);
+  function beginEditing(item) {
+    console.log("Editing item:", item);
+    setEditingItem({ ...item });
+    setEditImage(null);
+  }
+
+  async function deleteMenuItem(itemId) {
+    if (!window.confirm("Remove this item from the menu?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/menu/items/${itemId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Could not remove item (${response.status}).`);
+      }
+
+      await loadMenu();
+    } catch (error) {
+      console.error(error);
+      window.alert(error.message);
+    }
+  }
+
+  async function makeAvailable(item) {
+  if (!window.confirm(`Bring ${item.name} back to the menu?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${apiBaseUrl}/api/menu/items/${item.id}/available`,
+      { method: "PATCH" }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Could not restore item (${response.status}).`);
+    }
+
+    await loadMenu();
+  } catch (error) {
+    setErrorMessage(error.message);
+  }
 }
 
   return (
@@ -198,9 +253,7 @@ export function MenuManagement({ apiBaseUrl }) {
             type="text"
             placeholder="Category name"
             value={categoryName}
-            onChange={(event) =>
-              setCategoryName(event.target.value)
-            }
+            onChange={(event) => setCategoryName(event.target.value)}
             required
           />
 
@@ -219,9 +272,7 @@ export function MenuManagement({ apiBaseUrl }) {
               type="text"
               placeholder="Item name"
               value={itemName}
-              onChange={(event) =>
-                setItemName(event.target.value)
-              }
+              onChange={(event) => setItemName(event.target.value)}
               required
             />
 
@@ -231,24 +282,17 @@ export function MenuManagement({ apiBaseUrl }) {
               value={price}
               min="0"
               step="0.01"
-              onChange={(event) =>
-                setPrice(event.target.value)
-              }
+              onChange={(event) => setPrice(event.target.value)}
               required
             />
 
             <select
               value={categoryId}
-              onChange={(event) =>
-                setCategoryId(event.target.value)
-              }
+              onChange={(event) => setCategoryId(event.target.value)}
               required
             >
               {categories.map((category) => (
-                <option
-                  key={category.id}
-                  value={category.id}
-                >
+                <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
@@ -258,18 +302,14 @@ export function MenuManagement({ apiBaseUrl }) {
               id="menuItemImage"
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={(event) =>
-                setImage(event.target.files[0] || null)
-              }
+              onChange={(event) => setImage(event.target.files[0] || null)}
             />
 
             <button type="submit">Add Menu Item</button>
           </form>
         )}
 
-        {errorMessage && (
-          <p className="error">{errorMessage}</p>
-        )}
+        {errorMessage && <p className="error">{errorMessage}</p>}
       </section>
 
       <section className="card">
@@ -295,10 +335,10 @@ export function MenuManagement({ apiBaseUrl }) {
                 <td>{category.sortOrder}</td>
                 <td>
                   <button
-                  type = "button"
-                  onClick={() => deleteCategory(category.id)}
-                >
-                  Delete
+                    type="button"
+                    onClick={() => deleteCategory(category.id)}
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -310,154 +350,212 @@ export function MenuManagement({ apiBaseUrl }) {
       <section className="card">
         <h2>Menu Items</h2>
 
-<div className = "table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Picture</th>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Available</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Picture</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
 
-          <tbody>
-  {items.map((item) => {
-    const imageSource = getImageSource(item);
-    const isEditing = editingItem?.id === item.id;
+            <tbody>
+              {items.map((item) => {
+                const imageSource = getImageSource(item);
+                const isEditing = editingItem?.id === item.id;
 
-   
-    return (
-      <tr key={item.id}>
-        <td>
-          {imageSource ? (
-            <img
-              src={imageSource}
-              alt={item.name}
-              width="80"
-              height="60"
-              style={{ objectFit: "cover" }}
-            />
-          ) : (
-            "No picture"
-          )}
-        </td>
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      {imageSource ? (
+                        <img
+                          src={imageSource}
+                          alt={item.name}
+                          width="80"
+                          height="60"
+                          style={{ objectFit: "cover" }}
+                        />
+                      ) : (
+                        "No picture"
+                      )}
+                    </td>
 
-        <td>{item.id}</td>
-        <td>
-  {isEditing ? (
-    <input
-      style = {{ width: "120px"}}
-      value={editingItem.name}
-      onChange={(event) =>
-        setEditingItem({
-          ...editingItem,
-          name: event.target.value
-        })
-      }
-    />
-  ) : (
-    item.name
-  )}
-</td>
-        <td>
-  {isEditing ? (
-    <select
-      value={editingItem.categoryId}
-      onChange={(event) =>
-        setEditingItem({
-          ...editingItem,
-          categoryId: Number(event.target.value)
-        })
-      }
-    >
-      {categories.map((category) => (
-        <option key={category.id} value={category.id}>
-          {category.name}
-        </option>
-      ))}
-    </select>
-  ) : (
-    getCategoryName(item.categoryId)
-  )}
-</td>
+                    <td>{item.id}</td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          style={{ width: "120px" }}
+                          value={editingItem.name}
+                          onChange={(event) =>
+                            setEditingItem({
+                              ...editingItem,
+                              name: event.target.value,
+                            })
+                          }
+                        />
+                      ) : (
+                        item.name
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <select
+                          value={editingItem.categoryId}
+                          onChange={(event) =>
+                            setEditingItem({
+                              ...editingItem,
+                              categoryId: Number(event.target.value),
+                            })
+                          }
+                        >
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        getCategoryName(item.categoryId)
+                      )}
+                    </td>
 
-        <td>{/* This is the table cell for item price */}
-          {isEditing ? (
-            <input
-            style={{width: "75px"}}
-              type="number"
-              step="0.01"
-              value={editingItem.price}
-              onChange={(event) => 
-                setEditingItem({
-                ...editingItem,
-                price : event.target.value
-              })
-            }
-            />
-          ) : (
-            `$${Number(item.price).toFixed(2)}`
-          )}
-        </td>
-        {/* This is the table cell for item availability */}
-        <td>{isEditing ? (
-          <input
-            type = "checkbox"
-            checked = {editingItem.available}
-            onChange={(event) =>
-              setEditingItem({
-                ...editingItem,
-                available: event.target.checked
-              })
-            }
-            />
-          ) : (
-            item.available ? "Yes" : "No"
-        )}</td>
+                    <td>
+                      {/* This is the table cell for item price */}
+                      {isEditing ? (
+                        <input
+                          style={{ width: "75px" }}
+                          type="number"
+                          step="0.01"
+                          value={editingItem.price}
+                          onChange={(event) =>
+                            setEditingItem({
+                              ...editingItem,
+                              price: event.target.value,
+                            })
+                          }
+                        />
+                      ) : (
+                        `$${Number(item.price).toFixed(2)}`
+                      )}
+                    </td>
+                    {/* This is the table cell for item availability */}
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="checkbox"
+                          checked={editingItem.available}
+                          onChange={(event) =>
+                            setEditingItem({
+                              ...editingItem,
+                              available: event.target.checked,
+                            })
+                          }
+                        />
+                      ) : item.available ? (
+                        "Yes"
+                      ) : (
+                        "No"
+                      )}
+                    </td>
 
-        <td>
-          {isEditing ? (
-            <>
-              <button type="button">
-                Save
-              </button>
+                    <td>
+                      {isEditing ? (
+                        <>
+                          <button type="button">Save</button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingItem(null);
-                  setEditImage(null);
-                }}
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            /* This is the button for edit */
-            // <button
-            //   type="button"
-            //   onClick={() => {
-            //     setEditingItem({...item});
-            //     setEditImage(null);
-            //   }}
-            // >
-            <button
-            type="button"
-            onClick={()=> beginEditing(item)}
-            >
-              Edit
-            </button>
-          )}
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
-        </table>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingItem(null);
+                              setEditImage(null);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => beginEditing(item)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteMenuItem(item.id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {/*--------------------------------------86ed ITEMS SECTION-------------------------------------*/}
+      <section className="card">
+        <h2>86ed Menu Items</h2>
+
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Picture</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {eightySixedItems.map((item) => {
+                const imageSource = getImageSource(item);
+
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      {imageSource ? (
+                        <img
+                          src={imageSource}
+                          alt={item.name}
+                          width="80"
+                          height="60"
+                          style={{ objectFit: "cover" }}
+                        />
+                      ) : (
+                        "No picture"
+                      )}
+                    </td>
+                    <td>{item.id}</td>
+                    <td>{item.name}</td>
+                    <td>{getCategoryName(item.categoryId)}</td>
+                    <td>${Number(item.price).toFixed(2)}</td>
+                    <td>{item.available ? "Yes" : "No"}</td>
+                    <td>
+                      <button type="button"
+                      onClick={()=> makeAvailable(item)}
+                      >
+                        Make Available
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </section>
     </>
